@@ -7,9 +7,15 @@ const path = require('path');
 
 
 
+//Middlewares 
+
 app.use(express.json())
 app.use(cors());
 
+//MiddleWares
+
+
+//Mysql Connectiom 
 
 const conn = mysql.createConnection(
     {
@@ -21,6 +27,11 @@ const conn = mysql.createConnection(
 );
 
 
+//Mysql Connectiom 
+
+
+
+//Display images
 app.get("/fetchimg/:file", (req, res)=>{
 
 
@@ -28,6 +39,8 @@ app.get("/fetchimg/:file", (req, res)=>{
 
     
 });
+//Display images
+
 
 
 var storage = multe.diskStorage({
@@ -43,6 +56,10 @@ var upload = multe({
     storage: storage
 });
 
+
+
+
+//Admin Functions 
 
 app.post("/newMenu", upload.single('file'), (req, res) => {
     if (!req.file) {
@@ -104,12 +121,108 @@ app.post("/EditMenu", upload.single('file'), (req, res) => {
 
 
 
+app.post("/adddriver", upload.single('file'), (req, res) => {
+
+
+        
+    const driver = req.body.driver;
+    const phone = req.body.phone;
+    const phone2 = req.body.phone2;
+    const gender = req.body.gender;
+    const email =req.body.email;
+    const pass = req.body.pass;
+    const cpass = req.body.cpass;
+    const address = req.body.address;
+    const imgsrc = req.file.filename;
+
+if (!req.file) {
+
+    console.log("No file upload");
+
+
+} else {
+
+    const imgsrc = req.file.filename;
+
+    var query = "INSERT INTO driver_details(driver_name,driver_phone1, driver_phone2, driver_email, driver_address, driver_gender, driver_image, password) VALUES(?,?,?,?,?,?,?,?)";
+
+ 
+    conn.query(query, [driver, phone, phone2, email, address, gender, imgsrc, pass], (err, result) => {
+        if (err) throw err
+        res.end("uploaded");
+    })
+}
+});
+
+
+app.post("/Editdriver", upload.single('file'), (req, res) => {
+
+
+        
+    const driver = req.body.driver;
+    const phone = req.body.phone;
+    const id = req.body.id;
+    const phone2 = req.body.phone2;
+    const gender = req.body.gender;
+    const email =req.body.email;
+    const pass = req.body.pass;
+    const cpass = req.body.cpass;
+    const address = req.body.address;
+
+
+if (!req.file) {
+
+    console.log("No file upload");
+
+    var query = "UPDATE driver_details SET driver_name = ?, driver_phone1 = ?, driver_phone2 = ?, driver_email = ?, driver_address = ?, driver_gender = ?,  password = ? WHERE driver_id = ? ";
+
+ 
+    conn.query(query, [driver, phone, phone2, email, address, gender, pass, id], (err, result) => {
+        if (err) throw err
+        res.end("uploaded");
+    })
+
+
+} else {
+
+    const imgsrc = req.file.filename;
+
+    var query = "UPDATE driver_details SET driver_name = ?, driver_phone1 = ?, driver_phone2 = ?, driver_email = ?, driver_address = ?, driver_gender = ?, driver_image = ?, password = ? WHERE driver_id = ? ";
+
+ 
+    conn.query(query, [driver, phone, phone2, email, address, gender, imgsrc, pass, id], (err, result) => {
+        if (err) throw err
+        res.end("uploaded");
+    })
+}
+});
+
+
+
+
+
 app.get("/getUsers", (req, res)=>{
 
     conn.query("SELECT * FROM users", (err, result)=>{
 
         if(err) throw err;
         else{
+            res.send(JSON.stringify(result));
+        }
+
+    });
+
+
+});
+
+
+app.get("/getDrivers", (req, res)=>{
+
+    conn.query("SELECT * FROM driver_details", (err, result)=>{
+
+        if(err) throw err;
+        else{
+        
             res.send(JSON.stringify(result));
         }
 
@@ -173,6 +286,24 @@ app.get("/deleterev/:num", (req, res)=>{
 });
 
 
+app.get("/deleteDriver/:num", (req, res)=>{
+
+    const id = req.params.num;
+
+
+    conn.query("DELETE FROM driver_details WHERE driver_id = ? ",[id],(err,result)=>{
+
+
+        if(err) throw err;
+        else{
+            res.end("deleted");
+        }
+
+    });
+
+});
+
+
 app.get("/deleteItem/:num", (req, res)=>{
 
     const id = req.params.num;
@@ -205,6 +336,9 @@ app.get("/fetchmenu/:num", (req, res)=>{
     });
 
 });
+
+
+//Admin Functions 
 
 
 //APIS APIS
@@ -689,6 +823,86 @@ app.get("/processorder/:id/:act/:user", (req, res)=>{
 
 
 
+//Driver APIS
+
+
+app.post("/logindriver", (req, res)=>{
+
+    const user = req.body.user;
+    const password = req.body.password;
+
+
+    conn.query("SELECT * FROM driver_details WHERE driver_email = ? and password = ?", [user, password],
+    (err, result)=>{
+
+        if(err) throw err;
+        else{
+    
+            if(result.length>0)
+            res.send("success");
+            else
+            res.send("none");
+        }
+
+    });
+
+
+});
+
+app.get("/getDashData", (req, res)=>{
+
+    conn.query("SELECT * FROM myorder WHERE order_status = ?", ['Deliver'], (err, result1)=>{
+
+            if(err) throw err;
+            else{
+
+                var len = result1.length;
+
+                res.send(JSON.stringify([len,0,0]));
+            }
+
+    });
+
+});
+
+
+app.get("/getPending", (req, res)=>{
+
+    conn.query("SELECT * FROM myorder WHERE order_status = ?", ['Deliver'], (err, result1)=>{
+
+            if(err) throw err;
+            else{
+
+                res.send(JSON.stringify(result1));
+            }
+
+    });
+
+});
+
+
+app.post("/acceptdelivery", (req, res)=>{
+
+
+    const driver_id = req.body.id;
+    const delivery_id = req.body.delivery_id;
+    
+
+    conn.query("UPDATE myorder SET order_status = ? WHERE order_id = ?", ['accepted', delivery_id],
+    (err, result)=>{
+
+
+        if(err) throw err;
+        else{
+            res.send("Success");
+        }
+
+    })
+
+
+});
+
+//
 
 
 
